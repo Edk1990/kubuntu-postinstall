@@ -37,13 +37,13 @@ check_cmd() {
   local version=""
   if has "$cmd"; then
     if [[ -n "$version_cmd" ]]; then
-      version="$(eval "$version_cmd" 2>/dev/null | head -n 1 | tr -s ' ')"
+      version="$(set +o pipefail; eval "$version_cmd" 2>/dev/null | head -n 1 | tr -s ' ' || true)"
     fi
     printf "  %b[OK]%b %-28s %b%s%b\n" "$GREEN" "$NC" "$label" "$BLUE" "${version:-instalado}" "$NC"
-    ((TOTAL_OK++))
+    TOTAL_OK=$((TOTAL_OK + 1))
   else
     printf "  %b[FALHA]%b %-28s %bNão encontrado%b\n" "$RED" "$NC" "$label" "$RED" "$NC"
-    ((TOTAL_FAIL++))
+    TOTAL_FAIL=$((TOTAL_FAIL + 1))
   fi
 }
 
@@ -52,13 +52,13 @@ check_optional_cmd() {
   local version=""
   if has "$cmd"; then
     if [[ -n "$version_cmd" ]]; then
-      version="$(eval "$version_cmd" 2>/dev/null | head -n 1 | tr -s ' ')"
+      version="$(set +o pipefail; eval "$version_cmd" 2>/dev/null | head -n 1 | tr -s ' ' || true)"
     fi
     printf "  %b[OK]%b %-28s %b%s%b\n" "$GREEN" "$NC" "$label" "$BLUE" "${version:-instalado}" "$NC"
-    ((TOTAL_OK++))
+    TOTAL_OK=$((TOTAL_OK + 1))
   else
     printf "  %b[OPCIONAL]%b %-25s %bNão configurado / ausente%b\n" "$YELLOW" "$NC" "$label" "$YELLOW" "$NC"
-    ((TOTAL_WARN++))
+    TOTAL_WARN=$((TOTAL_WARN + 1))
   fi
 }
 
@@ -68,10 +68,10 @@ check_dpkg() {
     local ver
     ver="$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)"
     printf "  %b[OK]%b %-28s %b%s%b\n" "$GREEN" "$NC" "$label" "$BLUE" "$ver" "$NC"
-    ((TOTAL_OK++))
+    TOTAL_OK=$((TOTAL_OK + 1))
   else
     printf "  %b[FALHA]%b %-28s %bPacote não instalado%b\n" "$RED" "$NC" "$label" "$RED" "$NC"
-    ((TOTAL_FAIL++))
+    TOTAL_FAIL=$((TOTAL_FAIL + 1))
   fi
 }
 
@@ -81,10 +81,10 @@ check_flatpak_app() {
     local ver
     ver="$(flatpak list --app --columns=application,version | grep "^${app_id}" | awk '{print $2}')"
     printf "  %b[OK]%b %-28s %bFlatpak: %s%b\n" "$GREEN" "$NC" "$label" "$BLUE" "${ver:-instalado}" "$NC"
-    ((TOTAL_OK++))
+    TOTAL_OK=$((TOTAL_OK + 1))
   else
     printf "  %b[FALHA]%b %-28s %bFlatpak ausente%b\n" "$RED" "$NC" "$label" "$RED" "$NC"
-    ((TOTAL_FAIL++))
+    TOTAL_FAIL=$((TOTAL_FAIL + 1))
   fi
 }
 
@@ -120,10 +120,10 @@ main() {
   if has flatpak; then
     if flatpak remotes | grep -Fq "flathub"; then
       printf "  %b[OK]%b %-28s %bConfigurado%b\n" "$GREEN" "$NC" "Repositório Flathub" "$BLUE" "$NC"
-      ((TOTAL_OK++))
+      TOTAL_OK=$((TOTAL_OK + 1))
     else
       printf "  %b[FALHA]%b %-28s %bFlathub ausente%b\n" "$RED" "$NC" "Repositório Flathub" "$RED" "$NC"
-      ((TOTAL_FAIL++))
+      TOTAL_FAIL=$((TOTAL_FAIL + 1))
     fi
   fi
   check_flatpak_app "Chromium" org.chromium.Chromium
@@ -150,10 +150,10 @@ main() {
   section "Desenvolvimento: Node.js (via NVM)"
   if [[ -d "$HOME/.nvm" ]]; then
     printf "  %b[OK]%b %-28s %bInstalado em ~/.nvm%b\n" "$GREEN" "$NC" "NVM Directory" "$BLUE" "$NC"
-    ((TOTAL_OK++))
+    TOTAL_OK=$((TOTAL_OK + 1))
   else
     printf "  %b[FALHA]%b %-28s %b~/.nvm não encontrado%b\n" "$RED" "$NC" "NVM Directory" "$RED" "$NC"
-    ((TOTAL_FAIL++))
+    TOTAL_FAIL=$((TOTAL_FAIL + 1))
   fi
   check_cmd "Node.js" node "node -v"
   check_cmd "NPM" npm "npm -v"
@@ -168,8 +168,9 @@ main() {
   check_cmd "Buildah" buildah "buildah --version"
   check_cmd "Skopeo" skopeo "skopeo --version"
 
-  section "Ferramentas Específicas / Opcionais"
-  check_optional_cmd "Antigravity CLI (agy)" agy "agy --version"
+  section "Antigravity & Ferramentas IA"
+  check_cmd "Antigravity IDE" antigravity-ide "antigravity-ide --version | head -n1"
+  check_cmd "Antigravity CLI (agy)" agy "agy --version | head -n1"
   check_optional_cmd "Scion Harness" scion "scion --version"
 
   # Resumo Final

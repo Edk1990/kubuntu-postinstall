@@ -42,9 +42,11 @@ Scripts modulares e automatizados para configuração de ambiente pós-instalaç
   - **Podman Desktop** (`io.podman_desktop.PodmanDesktop`)
   - **RustDesk** (`com.rustdesk.RustDesk`)
 
-### 4. Ambientes de Desenvolvimento
-- **GitHub CLI (`gh`)**: via repositório oficial com chave segura em `/etc/apt/keyrings`.
+### 4. Ambientes de Desenvolvimento & Inteligência Artificial
 - **Visual Studio Code (`code`)**: via repositório APT oficial da Microsoft.
+- **Antigravity IDE (`antigravity-ide`)**: IDE autônoma com IA (standalone), com atalho de aplicativo para o KDE Plasma e comando no PATH.
+- **Antigravity CLI (`agy`)**: ferramenta de linha de comando para agentes e automação de código.
+- **GitHub CLI (`gh`)**: via repositório oficial com chave segura em `/etc/apt/keyrings`.
 - **Python**: `python3`, `pip`, `venv`, `pipx` e o gerenciador ultrarrápido **`uv`**.
 - **Node.js**: gerenciador **NVM** configurando a versão LTS atual como padrão.
 - **Java**: instalação de versões LTS disponíveis (`openjdk-25-jdk`, `openjdk-21-jdk`, `openjdk-17-jdk` ou `default-jdk`).

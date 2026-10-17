@@ -234,14 +234,14 @@ install_nvm_node() {
 
 # NVM — adicionado pelo script de pós-instalação do Kubuntu
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # Isso carrega o nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # Isso carrega a completude de comandos
 NVMRC
     fi
   done
   export NVM_DIR="$nvm_dir"
   # shellcheck disable=SC1091
-  . "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
   nvm install --lts
   nvm alias default 'lts/*'
 }
@@ -318,10 +318,92 @@ install_antigravity_cli() {
   has agy || [[ -x "$HOME/.local/bin/agy" ]] || warn "Confirme manualmente se a CLI Antigravity foi instalada."
 }
 
-antigravity_manual() {
-  warn "Antigravity Desktop/IDE não foi instalado automaticamente: os artefactos e instruções oficiais podem mudar."
-  printf 'Página oficial: https://antigravity.google/download\n'
-  printf 'Descarregue o pacote compatível com a arquitetura e siga as instruções atuais do projeto.\n'
+install_antigravity_ide() {
+  if has antigravity-ide || [[ -x /opt/antigravity-ide/bin/antigravity-ide ]] || [[ -x "$HOME/.local/bin/antigravity-ide" ]]; then
+    info "Antigravity IDE já está instalado."
+    return 0
+  fi
+
+  local arch
+  arch="$(dpkg --print-architecture)"
+  local ide_arch
+  case "$arch" in
+    amd64) ide_arch="linux-x64" ;;
+    arm64) ide_arch="linux-arm" ;;
+    *) warn "Arquitetura $arch não é suportada diretamente pelo instalador do Antigravity IDE."; return 0 ;;
+  esac
+
+  local tarball=""
+  local cleanup_tarball=0
+  if [[ -f "$HOME/Downloads/Antigravity IDE.tar.gz" ]]; then
+    tarball="$HOME/Downloads/Antigravity IDE.tar.gz"
+    info "Utilizando instalador encontrado em $tarball"
+  else
+    info "Descarregando Antigravity IDE ($ide_arch)..."
+    tarball="$(mktemp --suffix=.tar.gz)"
+    cleanup_tarball=1
+    local download_url=""
+    download_url="$(curl -fsSL https://antigravity.google/download 2>/dev/null | grep -o 'https://[^"'\'' ]*antigravity/stable/[^"'\'' ]*/'"${ide_arch}"'/Antigravity%20IDE\.tar\.gz' | head -n 1 || true)"
+    if [[ -z "$download_url" ]]; then
+      download_url="https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.5.5-4923483625488384/${ide_arch}/Antigravity%20IDE.tar.gz"
+    fi
+    if ! curl -fSL "$download_url" -o "$tarball"; then
+      warn "Não foi possível descarregar o Antigravity IDE automaticamente."
+      rm -f "$tarball"
+      return 0
+    fi
+  fi
+
+  info "Instalando Antigravity IDE..."
+  if sudo -n true 2>/dev/null; then
+    local install_dir="/opt/antigravity-ide"
+    sudo mkdir -p "$install_dir"
+    sudo tar -xzf "$tarball" -C "$install_dir" --strip-components=1
+    sudo ln -sf "$install_dir/bin/antigravity-ide" /usr/local/bin/antigravity-ide
+    sudo ln -sf "$install_dir/bin/antigravity-ide" /usr/local/bin/agy-ide
+
+    local desktop_file="/usr/share/applications/antigravity-ide.desktop"
+    sudo tee "$desktop_file" >/dev/null << DESKTOPEOF
+[Desktop Entry]
+Name=Antigravity IDE
+Comment=AI-First Integrated Development Environment
+GenericName=Integrated Development Environment
+Exec=/usr/local/bin/antigravity-ide %F
+Icon=/opt/antigravity-ide/resources/app/resources/linux/code.png
+Type=Application
+StartupNotify=true
+StartupWMClass=antigravity-ide
+Categories=Development;IDE;
+MimeType=text/plain;inode/directory;
+DESKTOPEOF
+    sudo update-desktop-database /usr/share/applications 2>/dev/null || true
+  else
+    local install_dir="$HOME/.local/share/antigravity-ide"
+    mkdir -p "$install_dir" "$HOME/.local/bin" "$HOME/.local/share/applications"
+    tar -xzf "$tarball" -C "$install_dir" --strip-components=1
+    ln -sf "$install_dir/bin/antigravity-ide" "$HOME/.local/bin/antigravity-ide"
+    ln -sf "$install_dir/bin/antigravity-ide" "$HOME/.local/bin/agy-ide"
+
+    cat << DESKTOPEOF > "$HOME/.local/share/applications/antigravity-ide.desktop"
+[Desktop Entry]
+Name=Antigravity IDE
+Comment=AI-First Integrated Development Environment
+GenericName=Integrated Development Environment
+Exec=${HOME}/.local/bin/antigravity-ide %F
+Icon=${install_dir}/resources/app/resources/linux/code.png
+Type=Application
+StartupNotify=true
+StartupWMClass=antigravity-ide
+Categories=Development;IDE;
+MimeType=text/plain;inode/directory;
+DESKTOPEOF
+    update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+  fi
+
+  if [[ "$cleanup_tarball" -eq 1 ]]; then
+    rm -f "$tarball"
+  fi
+  info "Antigravity IDE instalado com sucesso."
 }
 
 install_scion_harness() {
@@ -358,7 +440,7 @@ main() {
   local sudo_keepalive_pid
   while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
   sudo_keepalive_pid=$!
-  trap 'kill "$sudo_keepalive_pid" 2>/dev/null || true' EXIT
+  trap 'kill "${sudo_keepalive_pid:-}" 2>/dev/null || true' EXIT
 
   echo
   echo "O script instalará software e atualizará o sistema. Repositórios externos serão limitados aos fornecedores identificados no script."
@@ -380,7 +462,7 @@ main() {
   run_module "VirtualBox Guest Additions" install_virtualbox_guest
   run_module "Ferramentas básicas de backup" install_backup_basics
   run_module "Antigravity CLI (agy)" install_antigravity_cli
-  run_module "Antigravity Desktop/IDE (instruções oficiais)" antigravity_manual
+  run_module "Antigravity IDE (Standalone)" install_antigravity_ide
   run_module "Google Antigravity Harness / Scion (validação manual)" install_scion_harness
   summary
 }
