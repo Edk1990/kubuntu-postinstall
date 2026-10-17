@@ -1,0 +1,4 @@
+# Assegura que scripts shell mantenham quebras de linha LF no Linux
+*.sh text eol=lf
+*.txt text eol=lf
+*.md text eol=lf

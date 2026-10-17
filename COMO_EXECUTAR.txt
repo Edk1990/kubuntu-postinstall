@@ -1,0 +1,82 @@
+================================================================================
+  GUIA DE EXECUÇÃO — SCRIPT DE PÓS-INSTALAÇÃO KUBUNTU 26.04 LTS
+================================================================================
+
+Este guia orienta passo a passo como transferir, preparar e executar o script
+"kubuntu-postinstall-26.04.sh" no seu sistema Kubuntu / Ubuntu.
+
+--------------------------------------------------------------------------------
+1. REQUISITOS PRÉVIOS
+--------------------------------------------------------------------------------
+- Kubuntu 26.04 LTS (ou Ubuntu derivado) recém-instalado.
+- Conexão ativa com a Internet.
+- Um usuário comum que possua permissões de administrador (sudo).
+
+--------------------------------------------------------------------------------
+2. ATENÇÃO: CONVERSÃO DE QUEBRA DE LINHA (CRLF -> LF)
+--------------------------------------------------------------------------------
+Se você editou ou salvou o arquivo no Windows, ele pode conter quebras de linha
+no formato Windows (CRLF). No Linux, isso causa o erro:
+  "$'\r': command not found"
+
+Para garantir que o arquivo esteja no formato correto no Linux, execute:
+  sed -i 's/\r$//' kubuntu-postinstall-26.04.sh
+
+(Alternativamente, se tiver o utilitário instalado: dos2unix kubuntu-postinstall-26.04.sh)
+
+--------------------------------------------------------------------------------
+3. PASSO A PASSO PARA EXECUÇÃO
+--------------------------------------------------------------------------------
+
+Passo 1: Abra o terminal (pressione Ctrl + Alt + T no Kubuntu).
+
+Passo 2: Navegue até a pasta onde o script foi salvo. Exemplo:
+  cd ~/Downloads
+  # ou a pasta onde você colocou o arquivo
+
+Passo 3: Dê permissão de execução ao script:
+  chmod +x kubuntu-postinstall-26.04.sh
+
+Passo 4: Execute o script como UTILIZADOR COMUM:
+  ./kubuntu-postinstall-26.04.sh
+
+  >>> IMPORTANTE: NÃO execute com "sudo ./kubuntu-postinstall-26.04.sh"!
+  O script foi projetado para rodar no seu ambiente de usuário (configurando
+  Flatpaks, NVM, caminhos do usuário e pipx corretamente). Ele solicitará a
+  senha de administrador (sudo) automaticamente apenas nos passos necessários.
+
+--------------------------------------------------------------------------------
+4. O QUE ESPERAR DURANTE A EXECUÇÃO
+--------------------------------------------------------------------------------
+1. O script verificará a versão do sistema operacional e arquitetura.
+2. Pedirá a senha do `sudo` no início para validar os privilégios.
+3. Exibirá uma confirmação geral antes de iniciar as instalações.
+4. Manterá o `sudo` ativo em segundo plano durante o processo para evitar
+   que o tempo limite expire durante downloads pesados.
+5. Em alguns pontos específicos (ex: instalador da CLI Antigravity), ele pode
+   pedir sua confirmação interativa antes de rodar o instalador oficial.
+
+--------------------------------------------------------------------------------
+5. ONDE ENCONTRAR OS LOGS
+--------------------------------------------------------------------------------
+Todas as mensagens da execução (saídas completas e eventuais avisos) são salvas em:
+  ~/kubuntu-postinstall-logs/postinstall-AAAAMMDD-HHMMSS.log
+
+Ao final da execução, um resumo consolidado mostrará todos os módulos que
+foram concluídos, avisos pendentes e falhas (se houver).
+
+--------------------------------------------------------------------------------
+6. APÓS O TÉRMINO DA INSTALAÇÃO
+--------------------------------------------------------------------------------
+1. Reinicie o computador:
+     sudo reboot
+   (Essencial para carregar atualizações de kernel, firmwares e integrar
+    completamente as variáveis de ambiente dos Flatpaks e do NVM no menu KDE).
+
+2. Execute o script de verificação automatizada (auditoria):
+     chmod +x verificar-pos-instalacao.sh
+     ./verificar-pos-instalacao.sh
+
+   O script testará todos os pacotes, Flatpaks, ferramentas de desenvolvimento
+   e exibirá as versões instaladas em um resumo com status [OK], [OPCIONAL] ou [FALHA].
+================================================================================
